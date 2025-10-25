@@ -1,10 +1,11 @@
 package controller;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.ArrayList;
 
 
 import dto.CategoryHighlightDTO;
+import dto.MeasurementDTO;
 import dto.ProductDTO;
 import dto.ProductHighlightDTO;
 import dto.ProductStatsDTO;
@@ -14,6 +15,10 @@ import java.util.Properties; // Added Library
 import java.io.FileInputStream; // Added Library 
 import java.io.BufferedReader; // Added Library
 import java.io.FileReader; // Added Library 
+import java.util.ArrayList; // Added Library
+import java.util.Arrays; // Added Library
+import java.util.List; // 
+
 /**
  * Factory class to obtain instances of IController.
  * <p>
@@ -88,21 +93,45 @@ public final class ControllerFactory implements IController{
 			try (BufferedReader br = new BufferedReader(new FileReader(dataFile))){
 				String header = br.readLine();
 				parts = header.split(delimiter);	
-				names = new String[parts.length - 1];
-				System.arraycopy(parts,1,names,0,parts.length -1);	
+				names = new String[parts.length - 3];
+				System.arraycopy(parts,1,names,0,parts.length -3);	
 				
 				String line;
+				ArrayList<MeasurementDTO> measurements = new ArrayList<>(); 
+				ArrayList<YearDTO> years = new ArrayList<>();
+				YearDTO yearDto;
+				 
+				
 				while((line = br.readLine()) != null) {	
 					parts = line.split(delimiter);
-					 
+					
+					String yearStr = parts[0];
+					int year = Integer.parseInt(yearStr);
+					
+					int index = 1;  
+					MeasurementDTO currMeasurement;
+					
+					for(String name: names) {
+						currMeasurement = new MeasurementDTO(year, name, Double.parseDouble(names[index]));
+						measurements.add(currMeasurement);
+						index++;
+					}
+					
+					String commodityTop10_str = parts[index];
+					String headline_str = parts[index+1];
+					
+					commodityTop10_str = commodityTop10_str.replace("\"","");
+					headline_str = headline_str.replace("\"","");
+					
+					String [] commodityTop10Arr = commodityTop10_str.split(",");
+					String [] headlineArr = headline_str.split(",");
+					
+					ArrayList<String> commodityTop10 = new ArrayList<>(Arrays.asList(commodityTop10Arr)); 
+					ArrayList<String> headline = new ArrayList<>(Arrays.asList(headlineArr));
+					
+					yearDto = new YearDTO(year, measurements, commodityTop10, headline);
+					years.add(yearDto);
 				}
-				
-				
-				
-			
-			
-			
-			
 			}
 		} else {
 			try (BufferedReader br = new BufferedReader(new FileReader(metadataFile))){
@@ -184,3 +213,4 @@ public final class ControllerFactory implements IController{
 	}
 
 }
+
