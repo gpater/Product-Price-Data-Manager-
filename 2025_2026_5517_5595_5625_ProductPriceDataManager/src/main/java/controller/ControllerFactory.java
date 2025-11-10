@@ -1,19 +1,27 @@
 package controller;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.ArrayList;
 
 
 import dto.CategoryHighlightDTO;
+import dto.MeasurementDTO;
 import dto.ProductDTO;
 import dto.ProductHighlightDTO;
 import dto.ProductStatsDTO;
 import dto.Top10AppearanceDTO;
 import dto.YearDTO;
 import java.util.Properties; // Added Library 
+
+import domain.FileData;
+
 import java.io.FileInputStream; // Added Library 
 import java.io.BufferedReader; // Added Library
 import java.io.FileReader; // Added Library 
+import java.util.ArrayList; // Added Library
+import java.util.Arrays; // Added Library
+import java.util.List;
+
 /**
  * Factory class to obtain instances of IController.
  * <p>
@@ -32,6 +40,7 @@ public final class ControllerFactory implements IController{
 	
 	private String dataFile;
 	private String metadataFile;
+	private FileData dataBase;
 	
 	
     // Private constructor to prevent instantiation
@@ -61,6 +70,8 @@ public final class ControllerFactory implements IController{
 		props.load(new FileInputStream(iniPath));
 		dataFile = props.getProperty("dataFile");
 		metadataFile = props.getProperty("metadataFile");
+		dataBase = new FileData();
+		
 		
 		// 3) Read from the dataFile
 		try (BufferedReader br = new BufferedReader(new FileReader(metadataFile))){
@@ -81,64 +92,83 @@ public final class ControllerFactory implements IController{
 		
 		// Check if there is a metadataFile, to get the names 
 		Boolean MDFisNull = (metadataFile == null);
-		String [] names;
-		String [] parts;
 		
-		if (MDFisNull) {
-			try (BufferedReader br = new BufferedReader(new FileReader(dataFile))){
-				String header = br.readLine();
-				parts = header.split(delimiter);	
-				names = new String[parts.length - 1];
-				System.arraycopy(parts,1,names,0,parts.length -1);	
+		try (BufferedReader br = new BufferedReader(new FileReader(path))){
+			String line = br.readLine();
+			String [] header = line.split(delimiter); // Whole 1st line of the file
+			
+			for(int i = 1; i < header.length-2; i++) { 
+				dataBase.addProductName(header[i]); // Insert ONLY the names of the products
+			}
+			
+			
+			// Variables i need
+			int year;
+			YearDTO ydto;
+			ArrayList<MeasurementDTO> values;
+			MeasurementDTO mr;
+			String productName;
+			Double value;
+			
+			
+			String [] top10_arr;
+			String [] headline_arr;
+			ArrayList<String> commodityTop10;
+			ArrayList<String> headline;
+			
+			while((line = br.readLine()) != null) {
 				
-				String line;
-				while((line = br.readLine()) != null) {	
-					parts = line.split(delimiter);
+				String [] dataLine = line.split(delimiter);
+				
+				year = Integer.parseInt(dataLine[0]);
+				values = new ArrayList<MeasurementDTO>();
+				
+				for (int i = 1; i < dataLine.length - 2 ; i++) {
+					 productName = dataBase.getProductName(i - 1);
+					 value = Double.parseDouble(dataLine[i]);
 					 
+					 mr = new MeasurementDTO(year, productName, value);
+					 values.add(mr);
 				}
 				
+				top10_arr = dataLine[dataLine.length - 2].replaceAll("\"", "").split("\\s*,\\s*");
+				headline_arr = dataLine[dataLine.length - 1].split("|");
 				
+				commodityTop10 = new ArrayList<>(Arrays.asList(top10_arr));
+				headline = new ArrayList<>(Arrays.asList(headline_arr));
 				
-			
-			
-			
-			
+				ydto = new YearDTO(year, values, commodityTop10, headline);
+				dataBase.addYearToDict(ydto);
 			}
-		} else {
-			try (BufferedReader br = new BufferedReader(new FileReader(metadataFile))){
-				String line;
-				String lineArr [];
-				while((line = br.readLine()) != null) {
-					 lineArr = line.split(delimiter);
-				}
-			}
+			
+			
 		}
+		
 		
 		
 	}
 
 	@Override
 	public List<YearDTO> listYears() {
-		// TODO Auto-generated method stub
-		return null;
+		return dataBase.getAllYears();
 	}
 
 	@Override
 	public List<ProductDTO> listProducts() {
 		// TODO Auto-generated method stub
-		return null;
+		return dataBase.getAllProducts();
 	}
 
 	@Override
 	public YearDTO getYearMeasurements(int year) {
 		// TODO Auto-generated method stub
-		return null;
+		return dataBase.getYearDTO(year);
 	}
 
 	@Override
 	public ProductDTO getProductMeasurements(String productName) {
 		// TODO Auto-generated method stub
-		return null;
+		return dataBase.getProductDTO(productName);
 	}
 
 	@Override
@@ -184,3 +214,4 @@ public final class ControllerFactory implements IController{
 	}
 
 }
+
